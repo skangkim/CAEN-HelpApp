@@ -19,6 +19,7 @@ import email.encoders
 import getpass
 # time
 import time
+from datetime import datetime
 # log
 import logging
 
@@ -27,6 +28,8 @@ files_arr = [] # array of attached files and screenshots
 sc_count = 0 # number of screenshots taken 
 saved = -1 # number of screenshots saved
 
+start = 8
+end = 17
 
 # Main Window
 class MainWindow(QWidget):
@@ -78,6 +81,17 @@ class MainWindow(QWidget):
 		splitter_button.addWidget(button_report)
 		splitter_button.addWidget(button_FAQ)
 
+
+		# helpdesk contact page during hours of operation
+		# get current time
+		t = datetime.now()
+		hr = t.hour
+		if(t.weekday() < 5 and start <= hr and hr <= end):
+			button_contact = QPushButton('Contact', self)
+			button_contact.clicked.connect(self.visitContact)
+			splitter_button.addWidget(button_contact)			
+
+
 		# add buttons to splitter 
 		splitter1.addWidget(user_info)
 		splitter1.addWidget(splitter_button)
@@ -104,6 +118,9 @@ class MainWindow(QWidget):
 	def visitFAQ(self):
 		webbrowser.open('http://caenfaq.engin.umich.edu/')
 
+	def visitContact(self):
+		webbrowser.open('https://caen.engin.umich.edu/contact/')
+		
 	def show_sub_window(self):
 		self.w = SubWindow()
 		self.w.show()

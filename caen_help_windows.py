@@ -4,8 +4,7 @@
 import sys
 from PyQt5.QtWidgets import QMessageBox, QPlainTextEdit, QGridLayout, QFileDialog, QComboBox, QGroupBox, QPushButton, QWidget, QTextEdit, QApplication, QMainWindow, QLabel, QHBoxLayout, QSplitter, QStyleFactory
 from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtGui import QScreen
+from PyQt5.QtGui import QPixmap, QScreen, QIcon
 import socket, webbrowser
 import subprocess
 import os
@@ -24,12 +23,14 @@ from datetime import datetime
 import logging
 
 # global variables 
+start = 8
+end = 20
+
+# variables that are used in multiple classes
 files_arr = [] # array of attached files and screenshots
 sc_count = 0 # number of screenshots taken 
 saved = -1 # number of screenshots saved
 
-start = 8
-end = 17
 
 # Main Window
 class MainWindow(QWidget):
@@ -44,12 +45,13 @@ class MainWindow(QWidget):
 
 	def initUI(self):
 
+		self.setWindowIcon(QIcon('caen.png'))
 		hbox = QHBoxLayout(self)
 
 		splitter1 = QSplitter(Qt.Vertical) # for buttons
 		user_info = QSplitter(Qt.Vertical) # for contact and system information
 		
-                # contact information 
+				# contact information 
 		contact_box = QGroupBox('Contact')
 		contact_layout = QHBoxLayout()
 		contact_label = QLabel("(734) 764 2236\ncaen@umich.edu", self)
@@ -57,7 +59,7 @@ class MainWindow(QWidget):
 		contact_layout.addWidget(contact_label)
 		contact_box.setLayout(contact_layout)
 
-                # system information 
+				# system information 
 		sys_info_box = QGroupBox('System Info')
 		sys_info_layout = QHBoxLayout()
 		self.getSysInfo()
@@ -67,11 +69,11 @@ class MainWindow(QWidget):
 		sys_info_layout.addWidget(sys_info_label)
 		sys_info_box.setLayout(sys_info_layout)
 
-                # add contact & system info to user_info splitter 
+				# add contact & system info to user_info splitter 
 		user_info.addWidget(contact_box)
 		user_info.addWidget(sys_info_box)
 
-                # button
+				# button
 		button_report = QPushButton('Report a Problem', self)
 		button_report.clicked.connect(self.show_sub_window)
 		self.w = None
@@ -87,7 +89,7 @@ class MainWindow(QWidget):
 		t = datetime.now()
 		hr = t.hour
 		if(t.weekday() < 5 and start <= hr and hr <= end):
-			button_contact = QPushButton('Contact', self)
+			button_contact = QPushButton('Chat with us', self)
 			button_contact.clicked.connect(self.visitContact)
 			splitter_button.addWidget(button_contact)			
 
@@ -96,7 +98,7 @@ class MainWindow(QWidget):
 		splitter1.addWidget(user_info)
 		splitter1.addWidget(splitter_button)
 
-                # main splitter
+		# main splitter
 		splitter2 = QSplitter(Qt.Horizontal)
 
 		# open the caen logo
@@ -120,7 +122,7 @@ class MainWindow(QWidget):
 
 	def visitContact(self):
 		webbrowser.open('https://caen.engin.umich.edu/contact/')
-		
+
 	def show_sub_window(self):
 		self.w = SubWindow()
 		self.w.show()
@@ -134,6 +136,7 @@ class SubWindow(QWidget):
 		self.openWindow()
 
 	def openWindow(self):
+		self.setWindowIcon(QIcon('caen.png'))
 		sub_box = QHBoxLayout(self)
 
 		# Q1
@@ -198,37 +201,39 @@ class SubWindow(QWidget):
 		self.setGeometry(300,300,600,400)
 		self.setWindowTitle("Report Window")
 	
-        # save attached files to files_arr
+		# save attached files to files_arr
 	def getfile(self):
 		self.files_list, _ = QFileDialog.getOpenFileNames(self, directory="C:\TEMP") 
 		global files_arr
 		for i in self.files_list:
 			files_arr.append(i)
 
-        # open screenshot window
+		# open screenshot window
 	def showScreenshotWindow(self):
 		if(saved < 1):
 			self.w = ScreenShotClass()
 			self.w.show()
 		else:
 			msg = QMessageBox()
+			msg.setWindowTitle("Screenshot Info")
+			msg.setWindowIcon(QIcon('caen.png'))
 			msg.setIcon(QMessageBox.Information)
 			msg.setStandardButtons(QMessageBox.Ok)
 			msg.setText("You already attached 2 screenshots!")
 			msg.exec_()
-        # email window 
+		# email window 
 	def sendEmail(self):
 		global files_arr
 		global saved
 
-                # set up email 
+		# set up email 
 		SERVER = "mx1.a.mail.umich.edu"
 		send_email = MIMEMultipart()
 		UserName = getpass.getuser()
 		send_email['From'] = "{username}@umich.edu".format(username=UserName)
 		send_email['To'] = "sukang@umich.edu" # TODO: edit this email address 
-		send_email['Subject'] = "Issue Report"
-		message = "Issue Report from {username}\nDescription of the issue: \n{description}".format(username = UserName, description=self.A2.toPlainText())
+		send_email['Subject'] = "Windows Issue Report"
+		message = "Windows Issue Report from {username} on {hostname} \nDescription of the issue: \n{description}".format(username = UserName, hostname = socket.gethostname(), description=self.A2.toPlainText())
 		send_email.attach(MIMEText(message, 'plain'))
 
 		# open attached files & screenshot
@@ -241,7 +246,7 @@ class SubWindow(QWidget):
 
 		# get necessary information the computer is the issue
 		if str(self.A1.currentText()) == "Yes":
-                        # powershell script running .. 
+			# powershell script running .. 
 			proc = subprocess.Popen(["powershell.exe",'-executionpolicy', 'bypass' , '-noninteractive', '-nologo', '-file', "\\\\adsroot.itcs.umich.edu\\sysvol\\adsroot.itcs.umich.edu\\scripts\\engin\\helpdeskapp\\caeninfo.ps1"], stdout = sys.stdout)
 			proc.wait()
 			filename = "info.txt"
@@ -254,7 +259,7 @@ class SubWindow(QWidget):
 			except Exception as e:
 				send_email.attach(MIMEText('\nUnable to attach info.txt because of this error:\n{error}'.format(error=e), 'plain'))
 
-                # send email 
+		# send email 
 		server = smtplib.SMTP(SERVER)
 		server.starttls()
 		server.sendmail(send_email['From'], send_email['To'], send_email.as_string())
@@ -271,14 +276,14 @@ class SubWindow(QWidget):
 		if(os.path.isfile(log_file) == True): 
 			time_diff = time.time() - os.path.getmtime(log_file) # in seconds
 
-                # check if the user submitted more than 5 minutes ago 
+				# check if the user submitted more than 5 minutes ago 
 		if(os.path.isfile(log_file) != True) or (os.path.isfile(log_file) == True and ( time_diff > 60*5)):
 
 			# check the size (in Bytes) of files_arr
 			file_size = 0
 			for f in files_arr:
 				file_size += os.path.getsize(f)
-                        # <= 10MB 
+						# <= 10MB 
 			if file_size/1000000 <= 10:
 				self.sendEmail()
 				# logging
@@ -294,8 +299,10 @@ class SubWindow(QWidget):
 				if os.path.isfile("info.txt"):
 					os.remove("info.txt")
 
-                                # sent pop-up 
+				# sent pop-up 
 				msg = QMessageBox()
+				msg.setWindowTitle("Sent!")
+				msg.setWindowIcon(QIcon('caen.png'))
 				msg.setIcon(QMessageBox.Information)
 				msg.setStandardButtons(QMessageBox.Ok)
 				msg.setText("Your report has been sent. Thank you!")
@@ -315,6 +322,8 @@ class SubWindow(QWidget):
 
 				# error message pop-up
 				msg = QMessageBox()
+				msg.setWindowTitle("File size exceeded")
+				msg.setWindowIcon(QIcon('caen.png'))
 				msg.setIcon(QMessageBox.Information)
 				msg.setStandardButtons(QMessageBox.Ok)
 				msg.setText("Attached files exceeded 10MB.\n Your files and screenshots have been deleted.")
@@ -329,8 +338,10 @@ class SubWindow(QWidget):
 				return
 
 		else:
-                        # submitted <= 5 minutes ago 
+			# submitted <= 5 minutes ago 
 			msg = QMessageBox()
+			msg.setWindowTitle("Submission Info")
+			msg.setWindowIcon(QIcon('caen.png'))
 			msg.setIcon(QMessageBox.Information)
 			msg.setStandardButtons(QMessageBox.Ok)
 			msg.setText("You already submitted the report {minutes} minute(s) ago.".format(minutes = int(round(time_diff/60))))
@@ -353,6 +364,7 @@ class ScreenShotClass(QWidget):
 		self.set_layout()
 
 	def settings(self):
+		self.setWindowIcon(QIcon('caen.png'))
 		self.resize(500, 500)
 		self.setWindowTitle("Screenshoter")
 
@@ -382,6 +394,8 @@ class ScreenShotClass(QWidget):
 		filename = "sc_{num}.png".format(num = saved+1) 
 		if saved > 0: # if saved more than 2 screenshots 
 			msg = QMessageBox()
+			msg.setWindowTitle("Screenshot Info")
+			msg.setWindowIcon(QIcon('caen.png'))
 			msg.setIcon(QMessageBox.Information)
 			msg.setStandardButtons(QMessageBox.Ok)
 			msg.setText("You already saved 2 screenshots!\nClosing the screenshot window.")
@@ -397,6 +411,8 @@ class ScreenShotClass(QWidget):
 			sc_count += 1 
 			saved += 1
 			msg = QMessageBox()
+			msg.setWindowTitle("Screenshot Info")
+			msg.setWindowIcon(QIcon('caen.png'))
 			msg.setIcon(QMessageBox.Information)
 			msg.setStandardButtons(QMessageBox.Ok)
 			msg.setText("Screenshot was saved! You can take {no_sc} more screenshot(s)".format(no_sc = 1 - saved))
@@ -405,6 +421,8 @@ class ScreenShotClass(QWidget):
 
 		else: 
 			msg = QMessageBox()
+			msg.setWindowTitle("Screenshot Info")
+			msg.setWindowIcon(QIcon('caen.png'))
 			msg.setIcon(QMessageBox.Information)
 			msg.setStandardButtons(QMessageBox.Ok)
 			msg.setText("This screenshot has already been saved. \nClick \"New Screenshot\" to take {no_sc} more screenshot(s)".format(no_sc = 1 - saved))
@@ -416,6 +434,8 @@ class ScreenShotClass(QWidget):
 		global saved
 		if saved > 1: # prevent taking more than two screenshots
 			msg = QMessageBox()
+			msg.setWindowTitle("Screenshot Info")
+			msg.setWindowIcon(QIcon('caen.png'))
 			msg.setIcon(QMessageBox.Information)
 			msg.setStandardButtons(QMessageBox.Ok)
 			msg.setText("You already saved 2 screenshots!\nClosing the screenshot window.")
